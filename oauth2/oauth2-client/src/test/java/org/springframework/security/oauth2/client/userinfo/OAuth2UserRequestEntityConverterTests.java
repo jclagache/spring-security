@@ -26,10 +26,10 @@ import org.springframework.security.oauth2.core.AuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE;
@@ -59,6 +59,24 @@ public class OAuth2UserRequestEntityConverterTests {
 		assertThat(headers.getAccept()).contains(MediaType.APPLICATION_JSON);
 		assertThat(headers.getFirst(HttpHeaders.AUTHORIZATION)).isEqualTo(
 				"Bearer " + userRequest.getAccessToken().getTokenValue());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void convertWhenAuthenticationMethodQueryThenGetRequestWithAccessTokenQueryParameter() {
+		ClientRegistration clientRegistration = TestClientRegistrations.clientRegistration()
+				.userInfoAuthenticationMethod(AuthenticationMethod.QUERY).build();
+		OAuth2UserRequest userRequest = new OAuth2UserRequest(
+				clientRegistration, this.createAccessToken());
+
+		RequestEntity<?> requestEntity = this.converter.convert(userRequest);
+
+		assertThat(requestEntity.getMethod()).isEqualTo(HttpMethod.GET);
+		
+		MultiValueMap<String, String> queryParameters =
+				UriComponentsBuilder.fromUri(requestEntity.getUrl()).build().getQueryParams();
+		assertThat(queryParameters).containsEntry(OAuth2ParameterNames.ACCESS_TOKEN,
+				Collections.singletonList(userRequest.getAccessToken().getTokenValue()));
 	}
 
 	@SuppressWarnings("unchecked")
